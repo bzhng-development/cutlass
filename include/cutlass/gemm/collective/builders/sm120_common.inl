@@ -84,7 +84,10 @@ sm120_rr_smem_copy_selector_B() {
       return SM100_SU6_DU8x16_x4_LDSM_N{};
     }
     else if constexpr (sizeof_bits_v<ElementB> == 4) {
-      if constexpr (TileShapeN < 32) {
+      if constexpr (TileShapeN < 16) {
+        return SM100_SU4_DU8x16_x1_LDSM_N{};
+      }
+      else if constexpr (TileShapeN < 32) {
         return SM100_SU4_DU8x16_x2_LDSM_N{};
       }
       else {
@@ -92,7 +95,10 @@ sm120_rr_smem_copy_selector_B() {
       }
     }
     else {
-      if constexpr (TileShapeN < 32) {
+      if constexpr (TileShapeN < 16) {
+        return SM75_U32x1_LDSM_N{};
+      }
+      else if constexpr (TileShapeN < 32) {
         return SM75_U32x2_LDSM_N{};
       }
       else {
@@ -101,7 +107,10 @@ sm120_rr_smem_copy_selector_B() {
     }
   }
   else {
-    if constexpr (TileShapeN < 32) {
+    if constexpr (TileShapeN < 16) {
+      return SM75_U32x1_LDSM_N{};
+    }
+    else if constexpr (TileShapeN < 32) {
       return SM75_U32x2_LDSM_N{};
     }
     else {
@@ -168,9 +177,12 @@ sm120_tile_n_permute_selector() {
   else if constexpr (TileShapeN == 16) {
     return cute::Layout<cute::Shape<_8,_2>, cute::Stride<_1,_8>>{};
   }
+  else if constexpr (TileShapeN == 8) {
+    return cute::Layout<cute::Shape<_8>, cute::Stride<_1>>{};
+  }
   else {
     static_assert(cutlass::detail::dependent_false<cute::C<TileShapeN>>,
-      "TileShape_N must be at least 16 for SM120 blockscaled.");
+      "TileShape_N must be at least 8 for SM120 blockscaled.");
   }
 }
 

@@ -98,7 +98,7 @@ struct CollectiveBuilder<
   static_assert(cute::is_static_v<ClusterShape_MNK>, "Cluster has to be static");
   static_assert(detail::blockscaled::check_input_datatypes<BuilderScheduleTag, ElementPairA, ElementPairB, UmmaMajorA, UmmaMajorB>(), "Incorrect input types");
   static_assert(cute::size(ClusterShape_MNK{}) == Int<1>{}, "no programmatic multicast on this arch");
-  static_assert(size<1>(TileShape_MNK{}) >= 16, "Invalid tile shape N.");
+  static_assert(size<1>(TileShape_MNK{}) >= 8, "Invalid tile shape N.");
 
   static constexpr auto Instr = detail::blockscaled::select_instr<ElementPairA,
                                                                   ElementPairB,
@@ -125,7 +125,9 @@ struct CollectiveBuilder<
                 "TileSize and MNK Major does not met with MMA Mix 8-bit TMA load requirement" );
 
   using AtomLayoutMNK = cute::conditional_t<IsCooperative,
-      Layout<Shape<_4,_2,_1>>, Layout<Shape<_2,_2,_1>>>;
+      cute::conditional_t<(size<1>(TileShape_MNK{}) >= 16), Layout<Shape<_4,_2,_1>>,
+                          Layout<Shape<_8,_1,_1>>>,
+      Layout<Shape<_2,_2,_1>>>;
 
   using TiledMma = decltype(cute::make_tiled_mma(
     cute::rr_blockscaled_op_selector_sm120<ElementA,
