@@ -69,10 +69,7 @@ sm120_rr_smem_copy_selector_A() {
   }
 }
 
-// Helper for selecting the shared memory copy atom to use for operand B.
-// TileShapeN is the CTA N-tile size; when it drops below 32, the per-warp
-// B tile is too small for the LDSM_N x4 atom — fall back to x2 (64-bit/thread)
-// which matches the per-warp val count for N=16 with AtomLayoutMNK_N=2.
+// Helper for selecting the shared memory copy atom to use for operand B
 template <
   class ElementA,
   class ElementB,
@@ -87,9 +84,6 @@ sm120_rr_smem_copy_selector_B() {
       return SM100_SU6_DU8x16_x4_LDSM_N{};
     }
     else if constexpr (sizeof_bits_v<ElementB> == 4) {
-      // FP4 weight (mxf8f6f4 mixed-precision): SU4 LDSM x4 atom expects more
-      // vals per warp than (N=16, K_perm=32) delivers — fall back to x2 so the
-      // per-warp val count matches.
       if constexpr (TileShapeN < 32) {
         return SM100_SU4_DU8x16_x2_LDSM_N{};
       }
@@ -98,8 +92,6 @@ sm120_rr_smem_copy_selector_B() {
       }
     }
     else {
-      // FP8 (e4m3 / e5m2): same val-count math as the non-mxf8f6f4 path,
-      // so use the narrower x2 LDSM atom when the CTA N-tile is below 32.
       if constexpr (TileShapeN < 32) {
         return SM75_U32x2_LDSM_N{};
       }
@@ -170,15 +162,9 @@ auto
 sm120_tile_n_permute_selector() {
   static_assert(SFVectorSize == 16 || SFVectorSize == 32,
     "Unsupported SFVectorSize for SM120 collective builder.");
-  // For TileShape_N >= 32 the Frame (AtomLayoutMNK_N * AtomShape_N = 16) is replicated
-  // across the permute. The interleaved layout below places successive Frames at
-  // physical offsets {0..7, 16..23} and {8..15, 24..31} so a warp owns all the
-  // elements it needs for SF reduction.
   if constexpr (TileShapeN >= 32) {
     return cute::Layout<cute::Shape<_8,_2,_2>, cute::Stride<_1, _16,_8>>{};
   }
-  // For TileShape_N == 16 the Frame matches the tile exactly — no Frame replication,
-  // so identity is the correct permute.
   else if constexpr (TileShapeN == 16) {
     return cute::Layout<cute::Shape<_8,_2>, cute::Stride<_1,_8>>{};
   }

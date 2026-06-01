@@ -191,7 +191,6 @@ sm120_compute_tile_shape_or_override() {
         }
       }
       else {
-        // Clamp the epilogue N-tile to CTA_N so small-N CTAs (N=16) divide evenly.
         constexpr int EpiN = CTA_N < 32 ? CTA_N : 32;
         return Shape<_64, Int<EpiN>>{};
       }
